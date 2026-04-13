@@ -162,7 +162,46 @@ Catalog (20 songs)
 
 ---
 
+### Data Flow Diagram
 
+| Stage | What happens |
+|---|---|
+| **Input** | `data/songs.csv` is loaded into a list of 20 song dicts. `SAMPLE_USER_PROFILE` supplies the four listener preferences. Both are passed to `recommend_songs()`. |
+| **Process — The Loop** | `recommend_songs()` iterates over every song and calls `score_song(user_prefs, song)` once per song. Each call applies the four rules in order (genre → mood → energy → acousticness) and sums them to a `total_score` (max 4.5 pts). The `(song, score)` pair is appended to `scored_list`. |
+| **Output — The Ranking** | After all 20 songs are scored, `scored_list` is sorted in descending order by `total_score`. The top `k = 5` entries are returned as the final recommendations. |
+
+```mermaid
+flowchart TD
+    CSV[("data/songs.csv\n20 songs")] -->|"load_songs()"| CAT["Catalog\n20 song dicts"]
+    PROF["SAMPLE_USER_PROFILE\nfavorite_genre · favorite_mood\ntarget_energy · likes_acoustic"] --> LOOP
+
+    CAT --> LOOP["recommend_songs\nloops over each song"]
+
+    subgraph scoring ["score_song(user_prefs, song) — called once per song"]
+        direction TB
+        R1["Rule 1 — Genre match\n+2.0 pts if match, else 0"]
+        R2["Rule 2 — Mood match\n+1.0 pts if match, else 0"]
+        R3["Rule 3 — Energy proximity\n1.0 × (1 − |Δenergy|)  →  0–1.0 pts"]
+        R4["Rule 4 — Acousticness preference\n0.5 × (1 − |Δacousticness|)  →  0–0.5 pts"]
+        SUM["total_score = R1 + R2 + R3 + R4\nmax 4.5 pts"]
+        R1 --> R2 --> R3 --> R4 --> SUM
+    end
+
+    LOOP --> scoring
+    SUM --> COLLECT["scored_list\n20 (song, score) pairs"]
+
+    COLLECT --> SORT["Sort descending\nby total_score"]
+    SORT --> TOPK["Take top k = 5"]
+    TOPK --> OUT["Ranked Recommendations\n① Storm Runner — 3.29 pts\n② Block Party Anthem — 2.32 pts\n③ ..."]
+```
+
+---
+
+### Expected Biases (Before Implementation)
+
+- This system may over-prioritize genre because it carries 44% of the total score — a no-genre-match song starts 2.0 points behind before any other rule runs.
+- Mood matching is binary because the rule uses an exact string comparison (`==`), so "energetic" and "intense" are treated as completely different even though they are acoustically similar.
+- `likes_acoustic` is a boolean, so the formula hard-maps user preference to either `0.8` or `0.2` — listeners whose real taste sits anywhere in between will always be misrepresented.
 
 ---
 
