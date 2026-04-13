@@ -69,8 +69,8 @@ total_score = genre_points
 |---|---|---|---|---|
 | 1 | Genre match | **2.0** | Binary | `2.0` if `song.genre == user.favorite_genre`, else `0` |
 | 2 | Mood match | **1.0** | Binary | `1.0` if `song.mood == user.favorite_mood`, else `0` |
-| 3 | Energy proximity | **1.0** | Continuous | `1.0 × (1 − |song.energy − user.target_energy|)` |
-| 4 | Acousticness preference | **0.5** | Continuous | `0.5 × (1 − |song.acousticness − acousticness_pref|)` |
+| 3 | Energy proximity | **1.0** | Continuous | `1.0 × (1 − \|song.energy − user.target_energy\|)` |
+| 4 | Acousticness preference | **0.5** | Continuous | `0.5 × (1 − \|song.acousticness − acousticness_pref\|)` |
 
 where `acousticness_pref = 0.8` if `user.likes_acoustic` is `True`, else `0.2`.
 
