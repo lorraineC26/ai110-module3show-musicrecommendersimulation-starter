@@ -254,6 +254,51 @@ The starter example profile (`"pop"` / `"happy"`) was replaced with a custom pro
 
 <img src="public/phase3_CLIVerification.png" alt="CLI output showing top 5 recommendations for the rock/energetic profile" width="350">
 
+---
+
+### Exp 2: Phase 4 Stress Test — Diverse and Edge-Case Profiles
+
+Four additional user profiles were run to probe where the scoring logic breaks down. Each profile was designed to trigger a specific weakness in the four-rule formula.
+
+---
+
+#### Profile A — Genre/Mood Split (`edm / sad / energy: 0.9`)
+
+No song in the catalog is both EDM and sad. This forces a direct conflict between Rule 1 (genre, +2.0 max) and Rule 2 (mood, +1.0 max).
+
+<img src="public/p4s1-1.png" alt="CLI output for edm/sad profile showing Hyperdrive ranked #1 over Empty Barstool" width="350">
+
+**Result:** *Hyperdrive* (EDM, energetic) scored **3.37** while *Empty Barstool* (blues, sad) scored only **1.83**. The system recommended loud dance music to a user who explicitly asked for sad songs. Genre's 2:1 weight over mood is enough to completely override mood intent when the two signals point to different songs.
+
+---
+
+#### Profile B — Mood Value Not in Dataset (`folk / calm / energy: 0.3`)
+
+The mood `"calm"` does not appear in any song's `mood` field (the closest values are `"chill"`, `"relaxed"`, and `"peaceful"`). Rule 2 scores zero for every candidate.
+
+<img src="public/p4s1-2.png" alt="CLI output for folk/calm profile showing Willow & Rain ranked #1 with no mood match" width="350">
+
+**Result:** *Willow & Rain* (folk, peaceful) ranked #1 at **3.38** — entirely on genre and energy proximity. The mood preference was silently dropped. The output shows `no mood match (+0.0)` for every song, but nothing alerts the user that their mood preference was unrecognized.
+
+---
+
+#### Profile C — Near-Perfect Match (`pop / happy / energy: 0.85`)
+
+This profile was designed as a positive control: a user whose preferences align closely with a real song in the catalog (*Sunrise City*: pop, happy, energy 0.82).
+
+<img src="public/p4s1-3.png" alt="CLI output for pop/happy profile showing Sunrise City ranked #1 at 4.46/4.50" width="350">
+
+**Result:** *Sunrise City* scored **4.46 / 4.50** — the highest score observed across all runs. All four rules fired and contributed. This confirms the scoring formula can produce near-maximum results when preferences align, and provides a useful baseline for comparing the edge cases above.
+
+---
+
+#### Profile D — Unreachable Energy Target (`ambient / chill / energy: 0.0`)
+
+The lowest-energy song in the catalog is *Spacewalk Thoughts* at `0.28`. A target of `0.0` means no song can earn the full `+1.0` energy points — every candidate is penalized before scoring begins.
+
+<img src="public/p4s1-4.png" alt="CLI output for ambient/chill/energy-0.0 profile showing Spacewalk Thoughts capped at 4.16" width="350">
+
+**Result:** *Spacewalk Thoughts* (the only ambient/chill song) scored **4.16** instead of the theoretical **4.50**. The energy ceiling was 0.72 rather than 1.0. The system still ranked the correct song first, but the score underrepresents how good the match actually is — a user or developer reading the score without context might think the recommendation is weaker than it is.
 
 ---
 
