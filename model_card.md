@@ -61,14 +61,43 @@ Prompts:
 
 ## 6. Limitations and Bias 
 
-Where the system struggles or behaves unfairly. 
+### Genre Filter Bubble
 
-Prompts:  
+15 of 17 genres in the catalog have exactly one song. Because genre carries 44% of the total score (2.0 pts), that one song always ranks #1 for any matching user — no matter how badly its energy or mood fits.
 
-- Features it does not consider  
-- Genres or moods that are underrepresented  
-- Cases where the system overfits to one preference  
-- Ways the scoring might unintentionally favor some users  
+- An ambient fan who wants high energy (`target_energy = 0.95`) still gets *Spacewalk Thoughts* (`energy = 0.28`) at #1, because the 2.0pt genre bonus outweighs any energy penalty.
+- The system behaves more like a genre lookup table than a true recommender: energy and mood only break ties *within* the top slot, they can never displace it.
+
+### Acousticness Boolean Cliff
+
+`likes_acoustic` maps to either `0.8` (True) or `0.2` (False) — there is no middle ground.
+
+- A listener whose real acoustic preference sits around `0.5` is misrepresented by both options and loses up to **0.15 pts** compared to what a continuous scale would award.
+- This means two users with very different acoustic tastes can receive identical acousticness scores if they both fall on the same side of the True/False divide.
+
+### Ignored Song Features
+
+`tempo_bpm`, `valence`, and `danceability` are stored on every song but never used in scoring.
+
+- A user who wants fast-tempo or highly danceable music receives recommendations based only on genre, mood, energy, and acousticness — the extra data is collected but silently discarded.
+
+### Genre Overfitting
+
+The 2.0-pt genre bonus is large enough that a genre match nearly always wins, regardless of how the other signals compare.
+
+- A rock fan with `target_energy = 0.3` still gets *Storm Runner* (`energy = 0.91`) at #1 — an energy gap of 0.61 — because no combination of mood + energy + acousticness from a non-rock song can overcome the head start.
+- In practice, genre preference determines the #1 result and the remaining rules only sort positions 2–5.
+
+### Catalog Favors Certain User Types
+
+The catalog is unevenly distributed, which quietly advantages some users over others.
+
+- Lofi fans (3 songs) and pop fans (2 songs) receive meaningfully differentiated top-5 lists; users of any other genre get one genre match and four cross-genre fillers.
+- High-energy users (`target_energy > 0.8`) have 6 catalog candidates to compete for their top spots; low-energy users (`target_energy < 0.4`) have only 5, concentrated in softer genres like ambient, classical, and folk.
+
+---
+
+
 
 ---
 

@@ -242,12 +242,6 @@ You can add more tests in `tests/test_recommender.py`.
 
 ## Experiments You Tried
 
-- What happened when you changed the weight on genre from 2.0 to 0.5
-- What happened when you added tempo or valence to the score
-- How did your system behave for different types of users
-
----
-
 ### Exp 1: Phase 3 CLI Verification
 
 The starter example profile (`"pop"` / `"happy"`) was replaced with a custom profile (`"rock"` / `"energetic"`, `target_energy = 0.75`, `likes_acoustic = False`) to test how the scoring rules behave for a higher-energy listener.
@@ -368,7 +362,7 @@ Write 1 to 2 paragraphs here about what you learned:
 
 ---
 
-## 7. `model_card_template.md`
+<!-- ## 7. `model_card_template.md`
 
 Combines reflection and model card framing from the Module 3 guidance. :contentReference[oaicite:2]{index=2}  
 
@@ -472,4 +466,4 @@ A few sentences about what you learned:
 - What surprised you about how your system behaved
 - How did building this change how you think about real music recommenders
 - Where do you think human judgment still matters, even if the model seems "smart"
-
+ -->
