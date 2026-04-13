@@ -260,7 +260,7 @@ The starter example profile (`"pop"` / `"happy"`) was replaced with a custom pro
 
 Four additional user profiles were run to probe where the scoring logic breaks down. Each profile was designed to trigger a specific weakness in the four-rule formula.
 
-#### Profile A — Genre/Mood Split (`edm / sad / energy: 0.9`)
+#### Profile A: Genre/Mood Split (`edm / sad / energy: 0.9`)
 
 No song in the catalog is both EDM and sad. This forces a direct conflict between Rule 1 (genre, +2.0 max) and Rule 2 (mood, +1.0 max).
 
@@ -268,7 +268,7 @@ No song in the catalog is both EDM and sad. This forces a direct conflict betwee
 
 **Result:** *Hyperdrive* (EDM, energetic) scored **3.37** while *Empty Barstool* (blues, sad) scored only **1.83**. The system recommended loud dance music to a user who explicitly asked for sad songs. Genre's 2:1 weight over mood is enough to completely override mood intent when the two signals point to different songs.
 
-#### Profile B — Mood Value Not in Dataset (`folk / calm / energy: 0.3`)
+#### Profile B: Mood Value Not in Dataset (`folk / calm / energy: 0.3`)
 
 The mood `"calm"` does not appear in any song's `mood` field (the closest values are `"chill"`, `"relaxed"`, and `"peaceful"`). Rule 2 scores zero for every candidate.
 
@@ -276,7 +276,7 @@ The mood `"calm"` does not appear in any song's `mood` field (the closest values
 
 **Result:** *Willow & Rain* (folk, peaceful) ranked #1 at **3.38** — entirely on genre and energy proximity. The mood preference was silently dropped. The output shows `no mood match (+0.0)` for every song, but nothing alerts the user that their mood preference was unrecognized.
 
-#### Profile C — Near-Perfect Match (`pop / happy / energy: 0.85`)
+#### Profile C: Near-Perfect Match (`pop / happy / energy: 0.85`)
 
 This profile was designed as a positive control: a user whose preferences align closely with a real song in the catalog (*Sunrise City*: pop, happy, energy 0.82).
 
@@ -284,13 +284,59 @@ This profile was designed as a positive control: a user whose preferences align 
 
 **Result:** *Sunrise City* scored **4.46 / 4.50** — the highest score observed across all runs. All four rules fired and contributed. This confirms the scoring formula can produce near-maximum results when preferences align, and provides a useful baseline for comparing the edge cases above.
 
-#### Profile D — Unreachable Energy Target (`ambient / chill / energy: 0.0`)
+#### Profile D: Unreachable Energy Target (`ambient / chill / energy: 0.0`)
 
 The lowest-energy song in the catalog is *Spacewalk Thoughts* at `0.28`. A target of `0.0` means no song can earn the full `+1.0` energy points — every candidate is penalized before scoring begins.
 
 <img src="public/p4s1-4.png" alt="CLI output for ambient/chill/energy-0.0 profile showing Spacewalk Thoughts capped at 4.16" width="350">
 
 **Result:** *Spacewalk Thoughts* (the only ambient/chill song) scored **4.16** instead of the theoretical **4.50**. The energy ceiling was 0.72 rather than 1.0. The system still ranked the correct song first, but the score underrepresents how good the match actually is — a user or developer reading the score without context might think the recommendation is weaker than it is.
+
+---
+
+### Exp 3: Rebalanced Weights — Halve Genre, Double Energy
+
+**Question:** What happens when genre weight is cut from **2.0 → 1.0** and energy weight is doubled from **1.0 → 2.0**? Does the ranking become more accurate or just different?
+
+The total maximum score stays at **4.5 pts** — the budget is unchanged, just redistributed:
+
+| Rule | Baseline | Experiment |
+|---|---|---|
+| Genre match | 2.0 (44%) | 1.0 (22%) |
+| Mood match | 1.0 (22%) | 1.0 (22%) |
+| Energy proximity | 1.0 (22%) | 2.0 (44%) |
+| Acousticness pref | 0.5 (11%) | 0.5 (11%) |
+| **Max total** | **4.5** | **4.5** |
+
+**Profile used:** `rock / energetic / target_energy=0.75 / likes_acoustic=False`
+
+#### Side-by-Side Rankings
+
+| Rank | Baseline (genre=2.0, energy=1.0) | Score | Experiment (genre=1.0, energy=2.0) | Score |
+|---|---|---|---|---|
+| #1 | Storm Runner (rock, intense, e=0.91) | 3.29 | **Block Party Anthem** (hip-hop, energetic, e=0.87) | **3.20** |
+| #2 | Block Party Anthem (hip-hop, energetic, e=0.87) | 2.32 | **Storm Runner** (rock, intense, e=0.91) | **3.13** |
+| #3 | Hyperdrive (edm, energetic, e=0.95) | 2.22 | Hyperdrive (edm, energetic, e=0.95) | 3.02 |
+| #4 | Night Drive Loop (synthwave, moody, e=0.75) | 1.49 | Night Drive Loop (synthwave, moody, e=0.75) | 2.49 |
+| #5 | Sunrise City (pop, happy, e=0.82) | 1.42 | **Rooftop Lights** (indie pop, happy, e=0.76) | **2.41** |
+
+#### What Changed and Why
+
+**#1 and #2 swapped.** Storm Runner dropped from first to second because its genre bonus shrank from 2.0 → 1.0 (losing 1 full point). Block Party Anthem climbed to first because its mood match (1.0) + near-perfect energy proximity (1.76 pts at doubled weight) now totals more than Storm Runner's smaller genre bonus plus its energy proximity.
+
+**Sunrise City (#5) replaced by Rooftop Lights.** Both songs have no genre or mood match. The only difference is energy: Rooftop Lights sits at `e=0.76` (just 0.01 from target), while Sunrise City sits at `e=0.82` (0.07 from target). With energy worth 2.0 pts instead of 1.0, that 0.06 gap cost Sunrise City its slot.
+
+**Scores compressed significantly.** The gap between #1 and #5 shrank from **1.87 pts** (baseline) to **0.79 pts** (experiment). Doubling energy pulled all near-energy-target songs up toward the top, making the ranking more competitive and less decisive.
+
+#### More Accurate or Just Different?
+
+**Mostly different, and arguably less accurate for this profile.** The user explicitly stated `favorite_genre = "rock"`, yet the modified system promotes Block Party Anthem (hip-hop) above Storm Runner (rock). That directly contradicts the user's stated genre preference.
+
+The compressed score gap is also a problem: when the top five scores span only 0.79 pts, the recommendations feel weakly differentiated — any small energy shift in the catalog could reshuffle the top results unpredictably.
+
+One case where the experiment is *arguably* better: the swap at #5 (Sunrise City → Rooftop Lights) is more defensible. Rooftop Lights at `e=0.76` is genuinely a closer energy match to `target_energy=0.75` than Sunrise City at `e=0.82`. When genre and mood are already zero for both, energy *should* be the decisive signal — which is exactly what the doubled weight does.
+
+**Takeaway:** Halving genre and doubling energy makes the system prioritize "how does it feel" (energy/mood) over "what genre is it." That trade-off could make sense for a listener who cares more about vibe than label, but it introduces noise for users with strong genre preferences. The original 2.0 genre weight acts as a stable anchor; removing it makes the ranking sensitive to small energy differences across unrelated genres.
 
 ---
 
