@@ -174,3 +174,7 @@ Building this system showed me that a recommender is only as good as its rules a
 The most surprising moment was the EDM/sad test. The system recommended loud party music to someone asking for sad songs, and the score looked perfectly confident. Nothing in the output flagged the mismatch. That was unexpected.
 
 I now think about music apps differently. When Spotify or Apple Music recommends something that feels slightly off, I wonder what weight was too high or what label didn't match. The logic underneath might be simpler and more flawed than it appears.
+
+AI tools helped me think through edge cases and structure my write-ups faster. But I still had to double-check the actual scores by reading the code myself. The AI explanations were sometimes too confident, just like the recommender itself.
+
+If I extended this project, I would first fix the mood matching. Letting "calm" count as close to "chill" would immediately make the system more honest and more useful.

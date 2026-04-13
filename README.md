@@ -349,15 +349,13 @@ For a full analysis of each limitation, see [model_card.md](model_card.md).
 
 ## Reflection
 
-Read and complete `model_card.md`:
-
 [**Model Card**](model_card.md)
 
-Write 1 to 2 paragraphs here about what you learned:
+A recommender doesn't understand taste. It turns inputs into numbers and picks the highest score. Whichever feature gets the most weight controls the result. Here, genre is so dominant that it nearly always decides the #1 song no matter what the other signals say.
 
-- about how recommenders turn data into predictions
-- about where bias or unfairness could show up in systems like this
+Bias shows up in small, invisible ways. Genres with more songs give users more variety; everyone else gets one match and four fillers. A user who types "calm" instead of "chill" gets zero mood points with no warning. The system looks confident either way.
 
+For a full breakdown of the scoring logic, limitations and etc. see the [Model Card](model_card.md).
 
 ---
 
