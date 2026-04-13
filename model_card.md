@@ -99,16 +99,40 @@ The catalog is unevenly distributed, which quietly advantages some users over ot
 
 ## 7. Evaluation  
 
-How you checked whether the recommender behaved as expected. 
+Six user profiles were tested across three rounds of experiments. For each run, the goal was to check whether the top result felt like a reasonable match — and to find cases where it clearly did not.
 
-Prompts:  
+### Profiles Tested
 
-- Which user profiles you tested  
-- What you looked for in the recommendations  
-- What surprised you  
-- Any simple tests or comparisons you ran  
+| Profile | Genre | Mood | Energy | Acoustic |
+|---|---|---|---|---|
+| Main | rock | energetic | 0.75 | No |
+| Near-perfect | pop | happy | 0.85 | No |
+| Genre/mood conflict | edm | sad | 0.90 | No |
+| Unknown mood | folk | calm | 0.30 | Yes |
+| Unreachable energy | ambient | chill | 0.00 | Yes |
+| Rebalanced weights | rock | energetic | 0.75 | No |
 
-No need for numeric metrics unless you created some.
+---
+
+### Pairwise Comparisons
+
+**Rock/energetic vs. Pop/happy**  
+The pop/happy profile produced the highest score in all tests — *Sunrise City* scored 4.46 out of 4.50, with all four rules contributing. The rock profile scored noticeably lower (3.29) because the only rock song in the catalog has mood "intense", not "energetic", so the mood rule never fired. This comparison shows the system rewards users whose preferences happen to align with a real song almost perfectly, but quietly penalizes users whose mood word is close but not an exact match.
+
+**EDM/sad vs. Folk/calm**  
+Both profiles had a mood preference the system failed to satisfy — but for different reasons. The EDM/sad profile got loud dance music (*Hyperdrive*) at #1 because no EDM song is sad, and genre's higher weight overruled the mood request entirely. The folk/calm profile got the right genre (*Willow & Rain*) but the word "calm" does not exist in the catalog, so mood scored zero for every song with no warning. In both cases, the user asked for something the system could not deliver, but the system returned a confident-looking result anyway.
+
+**Ambient/chill/0.0 vs. Rock/energetic/0.75**  
+The ambient profile still returned the correct song (*Spacewalk Thoughts*) at #1, but the score was capped at 4.16 instead of the maximum 4.50 — because the catalog's lowest energy is 0.28, so a target of 0.0 is unreachable. The rock profile scored normally with no structural ceiling. This pair reveals that low-energy users are quietly penalized by a catalog that skews toward higher energy, even when the right song exists.
+
+**Baseline weights vs. Rebalanced weights (same rock profile)**  
+Running the rock/energetic profile with genre halved (1.0) and energy doubled (2.0) swapped the top two results: *Block Party Anthem* (hip-hop) moved to #1 and *Storm Runner* (rock) dropped to #2. The rest of the top five stayed nearly the same. This shows how sensitive the #1 slot is to a single weight change — and confirms that the original genre weight of 2.0 is what keeps the rock song on top for a self-described rock fan.
+
+---
+
+### What Surprised Me
+
+The most unexpected result was the EDM/sad edge case. The system recommended loud party music to someone who asked for sad songs, and the score (*Hyperdrive* at 3.37) looked high and confident — there was no signal in the output that anything had gone wrong. A real user reading those results would have no idea their mood preference had been ignored. That gap between a confident-looking score and an actually poor recommendation was not obvious until the edge cases were tested deliberately.
 
 ---
 
