@@ -75,15 +75,45 @@ def score_song(user_prefs: Dict, song: Dict) -> Tuple[float, List[str]]:
     Scores a single song against user preferences.
     Required by recommend_songs() and src/main.py
     """
-    # TODO: Implement scoring logic using your Algorithm Recipe from Phase 2.
-    # Expected return format: (score, reasons)
-    return []
+    score = 0.0
+    reasons = []
+
+    # Rule 1 — Genre match: +2.0 if exact match, else 0
+    if song["genre"] == user_prefs["favorite_genre"]:
+        score += 2.0
+        reasons.append(f"genre match (+2.0)")
+    else:
+        reasons.append(f"no genre match (+0.0)")
+
+    # Rule 2 — Mood match: +1.0 if exact match, else 0
+    if song["mood"] == user_prefs["favorite_mood"]:
+        score += 1.0
+        reasons.append(f"mood match (+1.0)")
+    else:
+        reasons.append(f"no mood match (+0.0)")
+
+    # Rule 3 — Energy proximity: 1.0 × (1 − |song.energy − target_energy|)
+    energy_pts = 1.0 * (1 - abs(song["energy"] - user_prefs["target_energy"]))
+    score += energy_pts
+    reasons.append(f"energy proximity (+{energy_pts:.2f})")
+
+    # Rule 4 — Acousticness preference: 0.5 × (1 − |song.acousticness − acousticness_pref|)
+    acousticness_pref = 0.8 if user_prefs["likes_acoustic"] else 0.2
+    acoustic_pts = 0.5 * (1 - abs(song["acousticness"] - acousticness_pref))
+    score += acoustic_pts
+    reasons.append(f"acousticness preference (+{acoustic_pts:.2f})")
+
+    return (score, reasons)
 
 def recommend_songs(user_prefs: Dict, songs: List[Dict], k: int = 5) -> List[Tuple[Dict, float, str]]:
     """
     Functional implementation of the recommendation logic.
     Required by src/main.py
     """
-    # TODO: Implement scoring and ranking logic
-    # Expected return format: (song_dict, score, explanation)
-    return []
+    scored = [
+        (song, score, " | ".join(reasons))
+        for song in songs
+        for score, reasons in [score_song(user_prefs, song)]
+    ]
+    return [(song, score, explanation)
+            for song, score, explanation in sorted(scored, key=lambda x: x[1], reverse=True)][:k]
