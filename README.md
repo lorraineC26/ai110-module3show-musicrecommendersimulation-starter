@@ -71,19 +71,62 @@ Genre carries the highest weight (0.40) because it is the most decisive user fil
 
 ---
 
+### Sample Taste Profile
+
+The recommender uses a `user_prefs` dictionary (or `UserProfile` object) as input. Below is the concrete profile used in this simulation:
+
+```python
+SAMPLE_USER_PROFILE = {
+    "favorite_genre": "rock",
+    "favorite_mood": "energetic",
+    "target_energy": 0.75,
+    "likes_acoustic": False
+}
+```
+
+**Why each value was chosen:**
+
+| Field | Value | Rationale |
+|---|---|---|
+| `favorite_genre` | `"rock"` | Sets a clear genre anchor — songs that match earn a full 0.40 bonus |
+| `favorite_mood` | `"energetic"` | Paired with genre to reward driven, active songs rather than relaxed ones |
+| `target_energy` | `0.75` | Moderately high — close enough to rock's typical range (0.85–0.97) to reward it, but not so extreme that only one song qualifies |
+| `likes_acoustic` | `False` | Penalizes highly acoustic songs; prefers electric/produced sound (acousticness preference becomes 0.2) |
+
+**Why this profile is not too narrow:**
+
+`target_energy = 0.75` sits between the extremes of the catalog. Songs at 0.60–0.90 all earn a meaningful energy score. A perfectly narrow profile (e.g., `target_energy = 0.97`) would collapse the ranking to a single obvious match; this value keeps the field competitive.
+
+**Worked example — differentiating "intense rock" from "chill lofi":**
+
+Using the formula `score = 0.40×genre + 0.30×mood + 0.20×energy_prox + 0.10×acoustic_prox` and `user_acousticness_pref = 0.2` (because `likes_acoustic = False`):
+
+| Song | genre | mood | energy_prox | acoustic_prox | **Total** |
+|---|---|---|---|---|---|
+| Storm Runner (rock, intense, e=0.91, a=0.10) | 0.40 | 0.00 | 0.20×(1−0.16)=0.168 | 0.10×(1−0.10)=0.090 | **0.658** |
+| Midnight Coding (lofi, chill, e=0.42, a=0.71) | 0.00 | 0.00 | 0.20×(1−0.33)=0.134 | 0.10×(1−0.51)=0.049 | **0.183** |
+
+The gap (0.658 vs 0.183) shows the profile strongly favors the rock track — genre and mood alone account for most of the difference, while the energy and acousticness terms reinforce it.
+
+---
+
 ### How Songs Are Chosen (ranking)
 
 After scoring every song, `recommend_songs()` sorts the full scored list in descending order and returns the top `k` results (default `k = 5`). The pipeline looks like this:
 
 ```
-Catalog (10 songs)
+Catalog (20 songs)
       │
-      ▼  score_song() × 10
+      ▼  score_song() × 20
 [(song, 0.91), (song, 0.74), (song, 0.43), ...]
       │
       ▼  sort descending, take top k
 [song_5, song_10, song_2, ...]   ← recommendations
 ```
+
+---
+
+
 
 ---
 
