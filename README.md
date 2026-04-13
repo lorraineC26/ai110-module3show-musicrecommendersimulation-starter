@@ -336,15 +336,14 @@ One case where the experiment is *arguably* better: the swap at #5 (Sunrise City
 
 ## Limitations and Risks
 
-Summarize some limitations of your recommender.
+- Only 20 songs in the catalog — most genres have a single representative, making variety impossible.
+- Genre carries 44% of the score, so it almost always decides the #1 result before other rules run.
+- `likes_acoustic` is a yes/no flag — listeners with in-between taste are misrepresented.
+- Mood matching is exact string comparison — unrecognized moods (e.g., "calm") silently score zero.
+- `tempo_bpm`, `valence`, and `danceability` are collected but never used in scoring.
+- High-energy users have more catalog candidates (6 songs) than low-energy users (5 songs), skewing variety.
 
-Examples:
-
-- It only works on a tiny catalog
-- It does not understand lyrics or language
-- It might over favor one genre or mood
-
-You will go deeper on this in your model card.
+For a full analysis of each limitation, see [model_card.md](model_card.md).
 
 ---
 

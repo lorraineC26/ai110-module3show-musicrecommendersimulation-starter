@@ -97,10 +97,6 @@ The catalog is unevenly distributed, which quietly advantages some users over ot
 
 ---
 
-
-
----
-
 ## 7. Evaluation  
 
 How you checked whether the recommender behaved as expected. 
