@@ -38,18 +38,22 @@ class Recommender:
         self.songs = songs
 
     def recommend(self, user: UserProfile, k: int = 5) -> List[Song]:
-        # TODO: Implement recommendation logic
-        return self.songs[:k]
+        """Score every song against the user profile and return the top k sorted by score."""
+        user_dict = user.__dict__
+        scored = sorted(
+            self.songs,
+            key=lambda song: score_song(user_dict, song.__dict__)[0],
+            reverse=True,
+        )
+        return scored[:k]
 
     def explain_recommendation(self, user: UserProfile, song: Song) -> str:
-        # TODO: Implement explanation logic
-        return "Explanation placeholder"
+        """Return a human-readable breakdown of why this song was recommended."""
+        _, reasons = score_song(user.__dict__, song.__dict__)
+        return " | ".join(reasons)
 
 def load_songs(csv_path: str) -> List[Dict]:
-    """
-    Loads songs from a CSV file.
-    Required by src/main.py
-    """
+    """Read data/songs.csv and return a list of song dicts with typed numeric fields."""
     import csv
     print(f"Loading songs from {csv_path}...")
     songs = []
@@ -71,10 +75,7 @@ def load_songs(csv_path: str) -> List[Dict]:
     return songs
 
 def score_song(user_prefs: Dict, song: Dict) -> Tuple[float, List[str]]:
-    """
-    Scores a single song against user preferences.
-    Required by recommend_songs() and src/main.py
-    """
+    """Score one song against user preferences (max 4.5 pts) and return (score, reasons)."""
     score = 0.0
     reasons = []
 
@@ -106,10 +107,7 @@ def score_song(user_prefs: Dict, song: Dict) -> Tuple[float, List[str]]:
     return (score, reasons)
 
 def recommend_songs(user_prefs: Dict, songs: List[Dict], k: int = 5) -> List[Tuple[Dict, float, str]]:
-    """
-    Functional implementation of the recommendation logic.
-    Required by src/main.py
-    """
+    """Score every song, sort by score descending, and return the top k as (song, score, explanation)."""
     scored = [
         (song, score, " | ".join(reasons))
         for song in songs
