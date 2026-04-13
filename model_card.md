@@ -2,35 +2,43 @@
 
 ## 1. Model Name  
 
-Give your model a short, descriptive name.  
-Example: **VibeFinder 1.0**  
+**MoodMatch 1.0**
 
 ---
 
 ## 2. Intended Use  
 
-Describe what your recommender is designed to do and who it is for. 
+MoodMatch 1.0 recommends songs from a small catalog based on a user's mood, genre, energy level, and acoustic preference.
 
-Prompts:  
+It generates a ranked list of up to five songs. Each song is scored and the highest-scoring song appears first.
 
-- What kind of recommendations does it generate  
-- What assumptions does it make about the user  
-- Is this for real users or classroom exploration  
+The system assumes each user can be described by four simple inputs: a favorite genre, a mood word, a target energy level (0 to 1), and whether they like acoustic music.
+
+It does not learn over time. It does not remember past listens. It scores each song the same way every time.
+
+This system is built for classroom exploration, not real users. It is meant to show how a basic recommender works — and where simple scoring logic can go wrong.
 
 ---
 
 ## 3. How the Model Works  
 
-Explain your scoring approach in simple language.  
+Every song in the catalog has five features: genre, mood, energy level, acousticness, and tempo. The system uses four of those — genre, mood, energy, and acousticness — to score each song.
 
-Prompts:  
+The user tells the system four things: their favorite genre, their favorite mood, how energetic they want the music to feel (on a scale from 0 to 1), and whether they like acoustic music.
 
-- What features of each song are used (genre, energy, mood, etc.)  
-- What user preferences are considered  
-- How does the model turn those into a score  
-- What changes did you make from the starter logic  
+The system then goes through every song and adds up a score based on four rules.
 
-Avoid code here. Pretend you are explaining the idea to a friend who does not program.
+**Rule 1 — Genre.** If the song's genre matches the user's favorite genre, it gets 2 full points. If not, it gets zero. This is the biggest rule.
+
+**Rule 2 — Mood.** If the song's mood label exactly matches the user's mood preference, it gets 1 point. If the words don't match exactly, it gets zero — even if the moods are very similar.
+
+**Rule 3 — Energy.** The system measures how close the song's energy level is to the user's target. A perfect match gives 1 full point. A big difference gives a smaller number.
+
+**Rule 4 — Acousticness.** The system checks whether the song sounds acoustic or not. If the user likes acoustic music, songs that sound acoustic score higher. This rule is worth up to 0.5 points.
+
+All four scores are added together. The maximum possible score is 4.5 points. Songs are then sorted from highest to lowest, and the top five are returned.
+
+The starter logic was already structured around these four rules. One experimental run tested what would happen if the genre weight was cut in half and the energy weight was doubled — that test showed how much the #1 result depends on the genre rule staying as large as it is.
 
 ---
 
