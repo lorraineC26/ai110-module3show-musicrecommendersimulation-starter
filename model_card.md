@@ -44,26 +44,33 @@ The starter logic was already structured around these four rules. One experiment
 
 ## 4. Data  
 
-Describe the dataset the model uses.  
+The catalog has 20 songs. Each song has a title, artist, genre, mood, energy level, tempo, and a few other audio features.
 
-Prompts:  
+The 20 songs span 17 different genres. These include: pop, rock, lofi, jazz, hip-hop, EDM, folk, classical, ambient, synthwave, indie pop, R&B, country, blues, reggae, soul, and metal.
 
-- How many songs are in the catalog  
-- What genres or moods are represented  
-- Did you add or remove data  
-- Are there parts of musical taste missing in the dataset  
+The moods represented are: happy, chill, intense, relaxed, moody, focused, melancholic, energetic, romantic, nostalgic, peaceful, angry, sad, and uplifting.
+
+The catalog is uneven. Lofi has 3 songs, pop has 2, and every other genre has exactly 1. This means most users only ever match one song in their genre.
+
+Several common mood words are missing entirely. There is no song labeled "calm," "excited," or "fun." A user who enters one of these words will get zero mood points for every song — with no warning.
+
+Tempo, danceability, and valence are stored for each song but never used in scoring. Users who care about those qualities are not served by the current model.
 
 ---
 
 ## 5. Strengths  
 
-Where does your system seem to work well  
+The system works best when a user's preferences closely match a real song in the catalog.
 
-Prompts:  
+The pop/happy profile is the clearest example. The song *Sunrise City* matches on genre, mood, energy, and acousticness all at once. It scored 4.46 out of 4.50 — nearly perfect. The recommendation felt immediately correct.
 
-- User types for which it gives reasonable results  
-- Any patterns you think your scoring captures correctly  
-- Cases where the recommendations matched your intuition  
+Lofi listeners also get good results. There are three lofi songs in the catalog, so the top-5 list has real variety within the genre. Users who prefer chill or focused moods will likely find something that fits.
+
+The energy scoring captures relative closeness well. A user who wants medium energy will consistently rank medium-energy songs above very high or very low ones. That ordering tends to match common sense.
+
+The acousticness rule also behaves intuitively. Users who like acoustic music get softer, guitar-like songs pushed up the list. Users who don't get louder, produced songs instead. That tradeoff feels right.
+
+Overall, the system is reliable when the user's genre is well-represented and their mood word exists in the catalog. In those cases, the top result is usually a reasonable match.
 
 ---
 
@@ -146,23 +153,24 @@ The most unexpected result was the EDM/sad edge case. The system recommended lou
 
 ## 8. Future Work  
 
-Ideas for how you would improve the model next.  
+**Add more song features to scoring.** Tempo, danceability, and valence are already in the catalog but never used. Including them would let the system serve users who want fast, danceable, or emotionally positive music.
 
-Prompts:  
+**Use a continuous acoustic scale.** Right now, acoustic preference is just yes or no. A sliding scale from 0 to 1 would capture the full range of listener preference and give more accurate scores.
 
-- Additional features or preferences  
-- Better ways to explain recommendations  
-- Improving diversity among the top results  
-- Handling more complex user tastes  
+**Replace exact mood matching with similarity.** If a user types "calm" and the closest catalog word is "chill," the system should still give partial credit. A simple synonym list would fix the silent zero problem.
+
+**Add a warning when preferences can't be met.** If no song matches the user's mood or genre, the system should say so. A confident-looking score with a poor match is misleading.
+
+**Improve top-5 diversity.** When the #1 song is locked in by genre, positions 2–5 often feel random. A diversity rule — like limiting songs from the same energy band — would make the full list more useful.
+
+**Expand the catalog.** Most genres have only one song. Adding more songs per genre would give the scoring rules something meaningful to work with and make energy and mood sorting actually matter.
 
 ---
 
 ## 9. Personal Reflection  
 
-A few sentences about your experience.  
+Building this system showed me that a recommender is only as good as its rules and its data. Small design choices like making genre worth 2 points, quietly shape every result.
 
-Prompts:  
+The most surprising moment was the EDM/sad test. The system recommended loud party music to someone asking for sad songs, and the score looked perfectly confident. Nothing in the output flagged the mismatch. That was unexpected.
 
-- What you learned about recommender systems  
-- Something unexpected or interesting you discovered  
-- How this changed the way you think about music recommendation apps  
+I now think about music apps differently. When Spotify or Apple Music recommends something that feels slightly off, I wonder what weight was too high or what label didn't match. The logic underneath might be simpler and more flawed than it appears.
