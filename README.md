@@ -87,9 +87,6 @@ Catalog (10 songs)
 
 ---
 
-
----
-
 ## Getting Started
 
 ### Setup
