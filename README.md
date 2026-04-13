@@ -54,20 +54,49 @@ A `UserProfile` captures a listener's taste as four preferences that map directl
 
 ### How a Score Is Computed (per song)
 
-The `Recommender` calls `score_song()` on every song in the catalog. Each song receives a weighted score in [0, 1] built from four components:
+The `Recommender` calls `score_song()` on every song in the catalog. Each song earns **raw points** across four rules, then songs are ranked by total score. The maximum possible score is **4.5 points**.
 
 ```
-score = 0.40 × genre_match
-      + 0.30 × mood_match
-      + 0.20 × (1 - |song.energy - user.target_energy|)
-      + 0.10 × (1 - |song.acousticness - user_acousticness_pref|)
+total_score = genre_points
+            + mood_points
+            + energy_points
+            + acousticness_points
 ```
 
-- `genre_match` and `mood_match` are binary (1 if it matches, 0 if not)
-- The energy and acousticness terms use **proximity scoring**: the closer the song's value is to the user's preference, the higher the contribution
-- `user_acousticness_pref` is 0.8 if `likes_acoustic` is True, else 0.2
+#### The Four Rules
 
-Genre carries the highest weight (0.40) because it is the most decisive user filter. Mood is second (0.30) because it reflects listening intent. Numerical features get lower weights because they award partial credit naturally through proximity — even a near-miss still contributes.
+| # | Component | Max pts | Type | Formula |
+|---|---|---|---|---|
+| 1 | Genre match | **2.0** | Binary | `2.0` if `song.genre == user.favorite_genre`, else `0` |
+| 2 | Mood match | **1.0** | Binary | `1.0` if `song.mood == user.favorite_mood`, else `0` |
+| 3 | Energy proximity | **1.0** | Continuous | `1.0 × (1 − |song.energy − user.target_energy|)` |
+| 4 | Acousticness preference | **0.5** | Continuous | `0.5 × (1 − |song.acousticness − acousticness_pref|)` |
+
+where `acousticness_pref = 0.8` if `user.likes_acoustic` is `True`, else `0.2`.
+
+#### Why These Weights
+
+**Genre gets 2.0 (44% of max).**  
+The catalog has 14 distinct genres across 20 songs — most genres appear once. Genre is the sharpest filter a listener has, so it earns the largest single reward. A genre match alone (2.0 pts) beats any combination of mood + energy + acousticness (max 2.5 pts) only when those other signals are near-perfect, which keeps rankings competitive rather than locked.
+
+**Mood gets 1.0 (22% of max).**  
+Mood reflects listening *intent* right now, not long-term taste. Weighting it at exactly half of genre means: a wrong-genre song with the right mood and great energy can still out-rank a genre-match with badly mismatched energy. This prevents the system from acting like a pure genre filter.
+
+**Energy gets 1.0 (22% of max).**  
+Energy spans the widest range in the catalog: `0.28` (Spacewalk Thoughts) to `0.97` (Shattered Glass) — a spread of `0.69`. Giving it a full 1.0-point ceiling means the proximity score has real resolution: a perfect energy match earns `1.0`, a worst-case mismatch earns only `0.31`. This is enough to meaningfully separate songs within the same genre.
+
+**Acousticness gets 0.5 (11% of max).**  
+Texture preference (electric vs. acoustic) is a real signal but should not override genre, mood, or energy. At half-weight it acts as a tiebreaker: two otherwise equal songs will be separated by whether they match the user's acoustic taste.
+
+#### Balance Check
+
+| Signal | Max pts | Share |
+|---|---|---|
+| Categorical (genre + mood) | 3.0 | 67% |
+| Numerical (energy + acousticness) | 1.5 | 33% |
+| **Total** | **4.5** | **100%** |
+
+Categorical signals dominate (two-thirds of possible points) because they represent explicit listener preferences. Numerical signals are strong enough to sort songs within the same genre/mood tier but cannot override a categorical match on their own.
 
 ---
 
@@ -88,25 +117,32 @@ SAMPLE_USER_PROFILE = {
 
 | Field | Value | Rationale |
 |---|---|---|
-| `favorite_genre` | `"rock"` | Sets a clear genre anchor — songs that match earn a full 0.40 bonus |
+| `favorite_genre` | `"rock"` | Sets a clear genre anchor — songs that match earn the full 2.0-point bonus |
 | `favorite_mood` | `"energetic"` | Paired with genre to reward driven, active songs rather than relaxed ones |
-| `target_energy` | `0.75` | Moderately high — close enough to rock's typical range (0.85–0.97) to reward it, but not so extreme that only one song qualifies |
-| `likes_acoustic` | `False` | Penalizes highly acoustic songs; prefers electric/produced sound (acousticness preference becomes 0.2) |
+| `target_energy` | `0.75` | Moderately high — close to rock's range (0.85–0.97) but not so extreme that only one song qualifies |
+| `likes_acoustic` | `False` | Prefers electric/produced sound; sets `acousticness_pref = 0.2` |
 
 **Why this profile is not too narrow:**
 
-`target_energy = 0.75` sits between the extremes of the catalog. Songs at 0.60–0.90 all earn a meaningful energy score. A perfectly narrow profile (e.g., `target_energy = 0.97`) would collapse the ranking to a single obvious match; this value keeps the field competitive.
+`target_energy = 0.75` sits between the catalog extremes (0.28–0.97). Songs in the 0.60–0.90 band all earn 0.85+ energy points, keeping several songs competitive. A perfectly narrow target like `0.97` would shrink the energy term to a single near-winner and flatten the rest of the ranking.
 
 **Worked example — differentiating "intense rock" from "chill lofi":**
 
-Using the formula `score = 0.40×genre + 0.30×mood + 0.20×energy_prox + 0.10×acoustic_prox` and `user_acousticness_pref = 0.2` (because `likes_acoustic = False`):
+`acousticness_pref = 0.2` (because `likes_acoustic = False`)
 
-| Song | genre | mood | energy_prox | acoustic_prox | **Total** |
+| Song | genre pts | mood pts | energy pts | acoustic pts | **Total / 4.5** |
 |---|---|---|---|---|---|
-| Storm Runner (rock, intense, e=0.91, a=0.10) | 0.40 | 0.00 | 0.20×(1−0.16)=0.168 | 0.10×(1−0.10)=0.090 | **0.658** |
-| Midnight Coding (lofi, chill, e=0.42, a=0.71) | 0.00 | 0.00 | 0.20×(1−0.33)=0.134 | 0.10×(1−0.51)=0.049 | **0.183** |
+| Storm Runner (rock, intense, e=0.91, a=0.10) | **2.0** | 0.0 | 1.0×(1−0.16)=**0.84** | 0.5×(1−0.10)=**0.45** | **3.29** |
+| Block Party Anthem (hip-hop, energetic, e=0.87, a=0.08) | 0.0 | **1.0** | 1.0×(1−0.12)=**0.88** | 0.5×(1−0.12)=**0.44** | **2.32** |
+| Shattered Glass (metal, angry, e=0.97, a=0.06) | 0.0 | 0.0 | 1.0×(1−0.22)=**0.78** | 0.5×(1−0.14)=**0.43** | **1.21** |
+| Midnight Coding (lofi, chill, e=0.42, a=0.71) | 0.0 | 0.0 | 1.0×(1−0.33)=**0.67** | 0.5×(1−0.51)=**0.25** | **0.92** |
+| Library Rain (lofi, chill, e=0.35, a=0.86) | 0.0 | 0.0 | 1.0×(1−0.40)=**0.60** | 0.5×(1−0.66)=**0.17** | **0.77** |
 
-The gap (0.658 vs 0.183) shows the profile strongly favors the rock track — genre and mood alone account for most of the difference, while the energy and acousticness terms reinforce it.
+**What the numbers show:**
+- Storm Runner (3.29) leads because genre is the dominant rule — 2.0 points is an insurmountable head start against no-genre-match songs.
+- Block Party Anthem (2.32) finishes second: no genre match, but the mood bonus (1.0) plus near-perfect energy (0.88) outweighs Shattered Glass which has neither.
+- Shattered Glass (1.21) earns only proximity points — high energy helps, but without genre or mood it stays in the middle tier.
+- The two lofi songs (0.92, 0.77) land at the bottom: wrong genre, wrong mood, far energy, and wrong acousticness all compound.
 
 ---
 
